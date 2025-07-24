@@ -1,4 +1,8 @@
+from flask import Flask, request, jsonify
+from openai import OpenAI
 import requests
+import os  # ← これを追加！
+
 
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")  # Render環境変数に設定しておく
 
