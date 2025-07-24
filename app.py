@@ -53,28 +53,36 @@ def slack_events():
 
     if data.get("type") == "url_verification":
         challenge = data.get("challenge")
-        if not challenge:
-            print("❌ challenge missing in verification request")
-            return "challenge not found", 400
         return challenge, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
     if data.get("event", {}).get("type") == "app_mention":
-        user_message = data["event"]["text"]
-        channel = data["event"]["channel"]
-        print(f"💬 Mention detected: {user_message}")
+        try:
+            user_message = data["event"]["text"]
+            channel = data["event"]["channel"]
+            print(f"💬 Mention detected: {user_message}")
 
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": user_message}]
-        )
-        reply = response.choices[0].message.content
+            # GPT応答生成
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": user_message}]
+            )
+            reply = response.choices[0].message.content
+            print(f"🤖 GPT reply: {reply}")
 
-        requests.post("https://slack.com/api/chat.postMessage", headers=SLACK_HEADERS, json={
-            "channel": channel,
-            "text": reply
-        })
+            # Slackに返信
+            slack_res = requests.post(
+                "https://slack.com/api/chat.postMessage",
+                headers=SLACK_HEADERS,
+                json={"channel": channel, "text": reply}
+            )
+            print(f"📤 Slack response status: {slack_res.status_code}")
+            print(f"📤 Slack response body: {slack_res.text}")
+
+        except Exception as e:
+            print("❌ Error during GPT response:", e)
 
     return jsonify({"status": "ok"})
+
 
 # ✅ Flaskアプリ起動
 if __name__ == '__main__':
