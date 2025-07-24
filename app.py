@@ -61,7 +61,6 @@ def slack_events():
             channel = data["event"]["channel"]
             print(f"💬 Mention detected: {user_message}")
 
-            # GPT応答生成
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": user_message}]
@@ -69,7 +68,6 @@ def slack_events():
             reply = response.choices[0].message.content
             print(f"🤖 GPT reply: {reply}")
 
-            # Slackに返信
             slack_res = requests.post(
                 "https://slack.com/api/chat.postMessage",
                 headers=SLACK_HEADERS,
@@ -83,8 +81,6 @@ def slack_events():
 
     return jsonify({"status": "ok"})
 
-
-# ✅ Flaskアプリ起動
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     print(f"🚀 App running on port {port}")
