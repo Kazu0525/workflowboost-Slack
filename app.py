@@ -1,4 +1,3 @@
-# app.py（Flaskサーバ）
 from flask import Flask, request, jsonify
 import openai
 import os
@@ -33,11 +32,6 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
-
-import os
-
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # ← ここがポイント！
+    port = int(os.environ.get("PORT", 5000))  # Render環境用にPORTを取得
     app.run(host='0.0.0.0', port=port, debug=True)
