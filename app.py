@@ -47,6 +47,8 @@ def chat():
     return jsonify({"reply": reply})
 
 @app.route("/slack/events", methods=["POST"], strict_slashes=False)
+print("📩 /slack/events hit")
+print("🔍 Raw Slack payload:", data)
 def slack_events():
     ...
 
