@@ -44,9 +44,13 @@ def chat():
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
-    data = request.get_json()
+    data = request.json  # ← ここを修正
     print("📩 /slack/events received:", data)
 
+        if not data:
+        print("❌ request.json returned None")
+        return "Invalid payload", 400
+            
     if data.get("type") == "url_verification":
         challenge = data.get("challenge")
         print("🔁 Responding to URL verification")
