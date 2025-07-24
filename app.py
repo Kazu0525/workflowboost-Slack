@@ -6,40 +6,55 @@ import httpx
 
 app = Flask(__name__)
 
-# ✅ HTTPクライアントを明示的に構成して、proxiesを除外
-custom_http_client = httpx.Client(proxies=None, follow_redirects=True)
-
+# OpenAIクライアント
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
-    http_client=custom_http_client
+    http_client=httpx.Client(proxies=None, follow_redirects=True)
 )
 
-SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
+# Slack設定
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
+SLACK_HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {SLACK_BOT_TOKEN}"
+}
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    try:
-        data = request.json
-        message = data.get("message", "")
+    data = request.json
+    message = data.get("message", "")
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": message}]
+    )
+    reply = response.choices[0].message.content
+    return jsonify({"reply": reply})
 
+# ✅ Slackイベント受信用エンドポイント
+@app.route("/slack/events", methods=["POST"])
+def slack_events():
+    data = request.json
+
+    # ✅ URL確認用イベント（初回のみ）
+    if data.get("type") == "url_verification":
+        return jsonify({"challenge": data["challenge"]})
+
+    # ✅ メンションされたら反応
+    if data.get("event", {}).get("type") == "app_mention":
+        user_message = data["event"]["text"]
+        channel = data["event"]["channel"]
+
+        # GPTに問い合わせ
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": message}]
+            messages=[{"role": "user", "content": user_message}]
         )
         reply = response.choices[0].message.content
 
-        if SLACK_WEBHOOK_URL:
-            slack_response = requests.post(
-                SLACK_WEBHOOK_URL,
-                json={"text": reply}
-            )
-            slack_response.raise_for_status()
+        # Slackへ返信
+        requests.post("https://slack.com/api/chat.postMessage", headers=SLACK_HEADERS, json={
+            "channel": channel,
+            "text": reply
+        })
 
-        return jsonify({"reply": reply})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    return jsonify({"status": "ok"})
