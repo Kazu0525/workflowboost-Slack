@@ -39,21 +39,21 @@ def chat():
     print("📨 /chat endpoint hit")
     data = request.json
     message = data.get("text", "")
+    print("📥 message from Chrome Extension:", message)
+
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": message}]
     )
     reply = response.choices[0].message.content
+    print("🤖 GPT reply to Chrome Extension:", reply)
     return jsonify({"reply": reply})
 
-@app.route("/slack/events", methods=["POST"], strict_slashes=False)
-print("📩 /slack/events hit")
-print("🔍 Raw Slack payload:", data)
-def slack_events():
-    ...
 
-    data = request.json
+@app.route("/slack/events", methods=["POST"], strict_slashes=False)
+def slack_events():
     print("📩 /slack/events hit")
+    data = request.json
     print("🔍 Raw Slack payload:", data)
 
     if not data:
@@ -66,6 +66,9 @@ def slack_events():
         return challenge, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
     event = data.get("event", {})
+    print("🧩 event type:", event.get("type"))
+    print("🧩 full event:", event)
+
     if event.get("type") == "message" and f"<@{SLACK_BOT_USER_ID}>" in event.get("text", ""):
         print("💬 Detected mention via message event")
 
@@ -94,9 +97,10 @@ def slack_events():
             print("❌ Error during GPT or Slack response:", e)
 
     else:
-        print(f"⚠️ Unsupported or unhandled event type: {event.get('type')}")
+        print("⚠️ No valid message/mention detected")
 
     return jsonify({"status": "ok"})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
