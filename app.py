@@ -38,7 +38,7 @@ SLACK_HEADERS = {
 def chat():
     print("📨 /chat endpoint hit")
     data = request.json
-    message = data.get("message", "")
+    message = data.get("text", "")
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": message}]
