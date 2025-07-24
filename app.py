@@ -2,12 +2,16 @@ from flask import Flask, request, jsonify
 from openai import OpenAI
 import requests
 import os
+import httpx
 
 app = Flask(__name__)
 
-# ✅ シンプルに初期化（http_client は渡さない）
+# ✅ HTTPクライアントを明示的に構成して、proxiesを除外
+custom_http_client = httpx.Client(proxies=None, follow_redirects=True)
+
 client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY")
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    http_client=custom_http_client
 )
 
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
@@ -18,14 +22,12 @@ def chat():
         data = request.json
         message = data.get("message", "")
 
-        # ✅ GPT 応答生成
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": message}]
         )
         reply = response.choices[0].message.content
 
-        # ✅ Slack 送信
         if SLACK_WEBHOOK_URL:
             slack_response = requests.post(
                 SLACK_WEBHOOK_URL,
