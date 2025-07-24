@@ -33,25 +33,26 @@ def chat():
 # ✅ Slackイベント受信用エンドポイント
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
-    data = request.json
+    data = request.get_json()
 
-    # ✅ URL検証：challenge をそのまま返す
+    # ✅ URL確認用イベント（Slackの厳格な期待に合わせる）
     if data.get("type") == "url_verification":
-        return data.get("challenge"), 200, {"Content-Type": "text/plain"}
+        challenge = data.get("challenge")
+        if not challenge:
+            return "challenge not found", 400
+        return challenge, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
-    # ✅ イベント：メンションへの応答
+    # ✅ app_mention 処理
     if data.get("event", {}).get("type") == "app_mention":
         user_message = data["event"]["text"]
         channel = data["event"]["channel"]
 
-        # GPT応答生成
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": user_message}]
         )
         reply = response.choices[0].message.content
 
-        # Slackに返信
         requests.post("https://slack.com/api/chat.postMessage", headers=SLACK_HEADERS, json={
             "channel": channel,
             "text": reply
