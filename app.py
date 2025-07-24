@@ -35,26 +35,27 @@ def chat():
 def slack_events():
     data = request.json
 
-    # ✅ URL確認用イベント（初回のみ）
+    # ✅ URL検証：challenge をそのまま返す
     if data.get("type") == "url_verification":
-        return jsonify({"challenge": data["challenge"]})
+        return data.get("challenge"), 200, {"Content-Type": "text/plain"}
 
-    # ✅ メンションされたら反応
+    # ✅ イベント：メンションへの応答
     if data.get("event", {}).get("type") == "app_mention":
         user_message = data["event"]["text"]
         channel = data["event"]["channel"]
 
-        # GPTに問い合わせ
+        # GPT応答生成
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": user_message}]
         )
         reply = response.choices[0].message.content
 
-        # Slackへ返信
+        # Slackに返信
         requests.post("https://slack.com/api/chat.postMessage", headers=SLACK_HEADERS, json={
             "channel": channel,
             "text": reply
         })
 
     return jsonify({"status": "ok"})
+
