@@ -49,21 +49,28 @@ def slack_events():
 
     if data.get("type") == "url_verification":
         challenge = data.get("challenge")
+        print("🔁 Responding to URL verification")
         return challenge, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
     if data.get("event", {}).get("type") == "app_mention":
+        print("💬 Detected app_mention event")
+
         try:
             user_message = data["event"]["text"]
             channel = data["event"]["channel"]
-            print(f"💬 Mention detected: {user_message}")
+            print(f"📝 Message: {user_message}")
+            print(f"📡 Channel: {channel}")
 
+            print("🧠 Sending to OpenAI...")
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": user_message}]
             )
+            print("✅ OpenAI response received")
             reply = response.choices[0].message.content
             print(f"🤖 GPT reply: {reply}")
 
+            print("📤 Sending to Slack...")
             slack_res = requests.post(
                 "https://slack.com/api/chat.postMessage",
                 headers=SLACK_HEADERS,
@@ -72,13 +79,11 @@ def slack_events():
             print(f"📤 Slack response status: {slack_res.status_code}")
             print(f"📤 Slack response body: {slack_res.text}")
 
-            if not slack_res.ok:
-                print("❗Slack responded with error:", slack_res.text)
-
         except Exception as e:
             print("❌ Error during GPT or Slack response:", e)
 
     return jsonify({"status": "ok"})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
