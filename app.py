@@ -5,11 +5,9 @@ import os
 import httpx
 import logging
 
-# ✅ ログ出力を有効にする
 logging.basicConfig(level=logging.DEBUG)
 print("✅ Flask app is starting...")
 
-# ✅ 環境変数の確認ログ
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 
@@ -22,13 +20,11 @@ if not SLACK_BOT_TOKEN:
 
 app = Flask(__name__)
 
-# ✅ OpenAIクライアント初期化
 client = OpenAI(
     api_key=OPENAI_API_KEY,
     http_client=httpx.Client(proxies=None, follow_redirects=True)
 )
 
-# ✅ Slack用ヘッダー
 SLACK_HEADERS = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {SLACK_BOT_TOKEN}"
@@ -76,8 +72,11 @@ def slack_events():
             print(f"📤 Slack response status: {slack_res.status_code}")
             print(f"📤 Slack response body: {slack_res.text}")
 
+            if not slack_res.ok:
+                print("❗Slack responded with error:", slack_res.text)
+
         except Exception as e:
-            print("❌ Error during GPT response:", e)
+            print("❌ Error during GPT or Slack response:", e)
 
     return jsonify({"status": "ok"})
 
