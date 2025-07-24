@@ -1,12 +1,6 @@
-from flask import Flask, request, jsonify
-from openai import OpenAI
-import os
+import requests
 
-app = Flask(__name__)
-
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY")
-)
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")  # Render環境変数に設定しておく
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -22,11 +16,15 @@ def chat():
         )
 
         reply = response.choices[0].message.content
+
+        # ✅ Slackにも返信を送信
+        slack_response = requests.post(
+            SLACK_WEBHOOK_URL,
+            json={"text": reply}
+        )
+        slack_response.raise_for_status()
+
         return jsonify({"reply": reply})
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
