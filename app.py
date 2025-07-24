@@ -10,16 +10,12 @@ print("✅ Flask app is starting...")
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
-SLACK_BOT_USER_ID = os.environ.get("SLACK_BOT_USER_ID")
 
 if not OPENAI_API_KEY:
     print("❌ OPENAI_API_KEY is missing!")
     exit(1)
 if not SLACK_BOT_TOKEN:
     print("❌ SLACK_BOT_TOKEN is missing!")
-    exit(1)
-if not SLACK_BOT_USER_ID:
-    print("❌ SLACK_BOT_USER_ID is missing!")
     exit(1)
 
 app = Flask(__name__)
@@ -38,22 +34,18 @@ SLACK_HEADERS = {
 def chat():
     print("📨 /chat endpoint hit")
     data = request.json
-    message = data.get("text", "")
-    print("📥 message from Chrome Extension:", message)
-
+    message = data.get("message", "")
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": message}]
     )
     reply = response.choices[0].message.content
-    print("🤖 GPT reply to Chrome Extension:", reply)
     return jsonify({"reply": reply})
 
-
-@app.route("/slack/events", methods=["POST"], strict_slashes=False)
+@app.route("/slack/events", methods=["POST"])
 def slack_events():
-    print("📩 /slack/events hit")
     data = request.json
+    print("📩 /slack/events hit")
     print("🔍 Raw Slack payload:", data)
 
     if not data:
@@ -66,11 +58,8 @@ def slack_events():
         return challenge, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
     event = data.get("event", {})
-    print("🧩 event type:", event.get("type"))
-    print("🧩 full event:", event)
-
-    if event.get("type") == "message" and f"<@{SLACK_BOT_USER_ID}>" in event.get("text", ""):
-        print("💬 Detected mention via message event")
+    if event.get("type") == "app_mention":
+        print("💬 Detected app_mention event")
 
         try:
             user_message = event["text"]
@@ -97,10 +86,9 @@ def slack_events():
             print("❌ Error during GPT or Slack response:", e)
 
     else:
-        print("⚠️ No valid message/mention detected")
+        print(f"⚠️ Unsupported or unhandled event type: {event.get('type')}")
 
     return jsonify({"status": "ok"})
-
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
